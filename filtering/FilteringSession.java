@@ -32,7 +32,7 @@ public class FilteringSession {
 		for (int x = 0; x < nx; x++) {
 			for (int y = 0; y < ny; y++) {
 				input.getNeighborhood(x, y, arr);
-				pixel = arr[2][0]+arr[2][1]+arr[2][2]-arr[0][0]-arr[0][1]-arr[0][2];
+				pixel = arr[2][0]+2*arr[2][1]+arr[2][2]-arr[0][0]-2*arr[0][1]-arr[0][2];
 				pixel = pixel / 6.0;
 				out.putPixel(x, y, pixel);
 			}
@@ -82,14 +82,78 @@ public class FilteringSession {
 		return out;
 	}
 
+
+	/**
+	 * Detects the Horizontal edges inside an ImageAccess object.
+	 *
+	 *     -------------------
+	 *     | -1  | -1  | -1  |
+	 *     -------------------
+	 *     |  0  |  0  |  0  |
+	 *     -------------------
+	 *     |  1  |  1  |  1  |
+	 *     -------------------
+	 *
+	 */
 	static public ImageAccess detectEdgeHorizontal_NonSeparable(ImageAccess input) {
-		IJ.showMessage("Question 1");
-		return input.duplicate();
+		int nx = input.getWidth();
+		int ny = input.getHeight();
+		double arr[][] = new double[3][3];
+		double pixel;
+		ImageAccess out = new ImageAccess(nx, ny);
+		for (int x = 0; x < nx; x++) {
+			for (int y = 0; y < ny; y++) {
+				input.getNeighborhood(x, y, arr);
+				pixel = arr[0][2]+arr[1][2]+arr[2][2]-arr[0][0]-arr[1][0]-arr[2][0];
+				pixel = pixel / 6.0;
+				out.putPixel(x, y, pixel);
+			}
+		}
+		return out;
 	}
 
+	/**
+	 * Detects the vertical edges inside an ImageAccess object.
+	 * This is the separable version of the edge detector.
+	 * The kernel of the filter applied to the rows has the following form:
+	 *     -------------------
+	 *     |  1  |  1  |  1  |
+	 *     -------------------
+	 *
+	 * The kernel of the filter applied to the columns has the following 
+	 * form:
+	 *     -------
+	 *     | -1  |
+	 *     -------
+	 *     |  0  |
+	 *     -------
+	 *     |  1  |
+	 *     -------
+	 *
+	 * Mirror border conditions are applied.
+	 */
 	static public ImageAccess detectEdgeHorizontal_Separable(ImageAccess input) {
-		IJ.showMessage("Question 1");
-		return input.duplicate();
+		int nx = input.getWidth();
+		int ny = input.getHeight();
+		ImageAccess out = new ImageAccess(nx, ny);
+
+		double colin[]  = new double[ny];
+		double colout[] = new double[ny];
+		for (int x = 0; x < nx; x++) {
+			input.getColumn(x, colin);
+			doDifference3(colin, colout);
+			out.putColumn(x, colout);
+		}
+
+		double rowin[]  = new double[nx];
+		double rowout[] = new double[nx];
+		for (int y = 0; y < ny; y++) {
+			out.getRow(y, rowin);
+			doAverage3(rowin, rowout);
+			out.putRow(y, rowout);
+		}
+		
+		return out;
 	}
 
 	/**
