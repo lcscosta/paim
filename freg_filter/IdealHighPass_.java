@@ -17,13 +17,13 @@ public class IdealHighPass_ extends PlugInFrame implements ActionListener {
 	static Frame instance;
 
 	public IdealHighPass_() {
-		super("Ideal LowPass");
+		super("Ideal HighPass");
 		if (instance!=null) {
 			instance.toFront();
 			return;
 		}
 		instance = this;
-		IJ.register(LowPass_.class);
+		IJ.register(IdealHighPass_.class);
 
 		setLayout(new FlowLayout());
 		panel = new Panel();
@@ -105,9 +105,16 @@ class IdealRunner extends Thread {
 			radius=64;
 		if (command.equals("PI/2"))
 			radius=128;
-//
-//		design the filter here
-//
+		for (i=0;i<256;i++) {
+			for (j=0;j<256;j++) {
+				r=(int)Math.round(Math.sqrt(Math.pow((double)i-128,2)+Math.pow((double)j-128,2)));
+				if (r<=radius) {
+					im.putPixel(i,j,0);
+				} else {
+					im.putPixel(i,j,1);
+				}
+			}
+		}
 		im.show("Ideal High Pass "+command);
 	}
 }

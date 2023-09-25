@@ -17,13 +17,13 @@ public class ButterHighPass_ extends PlugInFrame implements ActionListener {
 	static Frame instance;
 
 	public ButterHighPass_() {
-		super("Butter LowPass");
+		super("Butter HighPass");
 		if (instance!=null) {
 			instance.toFront();
 			return;
 		}
 		instance = this;
-		IJ.register(LowPass_.class);
+		IJ.register(ButterHighPass_.class);
 
 		setLayout(new FlowLayout());
 		panel = new Panel();
@@ -91,9 +91,9 @@ class ButterRunner extends Thread {
 	}
 
 	void runCommand(String command) {
-		int r, i, j;
+		int i, j;
 		int radius = 0;
-		double f;
+		double r, val;
 		ImageAccess im;
 		IJ.showStatus(command + "...");
 		im=new ImageAccess(256,256);
@@ -105,9 +105,14 @@ class ButterRunner extends Thread {
 			radius=64;
 		if (command.equals("PI/2"))
 			radius=128;
-//
-//		design the filter here
-//
-		im.show("Low Pass "+command);
+		for (i=0;i<256;i++) {
+			for (j=0;j<256;j++) {
+				r=(double)Math.round(Math.sqrt(Math.pow((double)i-128,2)+Math.pow((double)j-128,2)));
+				val=(double)1.0/(1.0 + Math.pow((radius/r),2));
+				im.putPixel(i,j,val);
+			}
+		}
+
+		im.show("Butter High Pass "+command);
 	}
 }
