@@ -110,8 +110,16 @@ public static ImageAccess applyRamLakFilter(ImageAccess sinogram)
 public static double[] generateRamLak(int size)
 {
 	double[] filter = new double[size];
-
-	// Add your code here
+	double steps = 0.5/(size/2);
+	
+	filter[0] = 0.0;
+	for(int i=1; i<size; i++){
+		if(i <= (size/2)){
+			filter[i] = filter[i-1] + steps;
+		} else {
+			filter[i] = filter[i-1] - steps;
+		}
+	}
 	
 	return filter;	
 } 
@@ -129,7 +137,25 @@ public static ImageAccess applyCosineFilter(ImageAccess sinogram)
 	int size    = sinogram.getHeight();
 	ImageAccess output = new ImageAccess(nbAngle, size);
 	
-	// Add your code here
+	double[] real = new double[size];
+	double[] imaginary = new double[size];
+	double[] filter = generateCosine(size);
+	
+	RadonFFT1D fft = new RadonFFT1D(size);
+	
+	for (int k=0; k<nbAngle; k++) {
+		sinogram.getColumn(k, real);
+		for(int l=0; l<size; l++) {				
+			imaginary[l] = 0.0;
+		}
+		fft.transform(real, imaginary);
+		for(int l=0; l<size; l++) {				
+			real[l]      = real[l] * filter[l];
+			imaginary[l] = imaginary[l] * filter[l];
+		}
+		fft.inverse(real, imaginary);
+		output.putColumn(k, real);
+	}
 
 	return output;
 }
@@ -139,10 +165,15 @@ public static ImageAccess applyCosineFilter(ImageAccess sinogram)
 */
 public static double[] generateCosine(int size)
 {
-	double[] filter= new double[size];
+	double[] filter = new double[size];
 	
-	// Add your code here
-	
+	filter[0] = 0.0;
+	for(int i=1; i<size/2; i++){
+		double w = (double)i / (double)size;
+		filter[i] = w * Math.cos(Math.PI*w);
+		filter[size - i] = filter[i];
+
+	}
 	return filter;	
 } 
 
@@ -158,8 +189,14 @@ public static ImageAccess applyLaplacianFilter(ImageAccess sinogram)
 	int size    = sinogram.getHeight();
 	ImageAccess output = new ImageAccess(nbAngle, size);
 	
-	// Add your code here
-	
+	for (int k = 0; k < nbAngle; k++) {
+		output.putPixel(k, 0, (-2*sinogram.getPixel(k, 0) + 2*sinogram.getPixel(k,1)));
+		for (int j = 1; j < size - 1; j++) {
+			output.putPixel(k, j, (sinogram.getPixel(k, j-1) + -2*sinogram.getPixel(k, j) + sinogram.getPixel(k, j+1)));
+		}
+		output.putPixel(k, size-1, (-2*sinogram.getPixel(k, size-1) + 2*sinogram.getPixel(k, size-2)));
+	}
+
 	return output;
 }
 
@@ -172,21 +209,41 @@ public static ImageAccess applyLaplacianFilter(ImageAccess sinogram)
 */
 public static ImageAccess inverseRadon(ImageAccess sinogram)
 {
-	int	nbAngles = sinogram.getWidth();
-	int	size     = sinogram.getHeight();
-	double b[][] = new double[size][size];
-
-	for (int i=0; i<size; i++) {
-		for (int j=0; j<size; j++) {
-			b[i][j] = 0.0;
-		}
-	}
+	int nbAngles = sinogram.getWidth();
+    int size = sinogram.getHeight();
+    double[][] b = new double[size][size];
     
-	// Add you code here
-	
-	ImageAccess reconstudedImage = new ImageAccess(b); 
-	
-	return reconstudedImage;
+	double[] array = new double[size];
+    double center = (size - 1) / 2.0;
+    double radius2 = center * center;
+    double stepAngle = Math.PI / nbAngles;
+    
+	for (int i = 0; i < size; i++) {
+      for (int j = 0; j < size; j++)
+        b[i][j] = 0.0; 
+    } 
+    for (int i = 0; i < nbAngles; i++) {
+      double angle = i * stepAngle - Math.PI/2;
+      double cos = Math.cos(angle);
+      double sin = Math.sin(angle);
+      sinogram.getColumn(i, array);
+      for (int j = 0; j < size; j++) {
+        for (int k = 0; k < size; k++) {
+          double mc = k - center;
+          double nc = j - center;
+          if (mc * mc + nc * nc < radius2) {
+            double m = center + mc * cos + nc * sin;
+            double v = getInterpolatedPixel1D(array, m);
+            b[k][j] += v;
+          } 
+        } 
+      } 
+    } 
+
+    double norm = Math.PI / nbAngles;
+    ImageAccess imageAccess = new ImageAccess(b);
+    imageAccess.multiply(norm);
+    return imageAccess;
 }
 
 
@@ -201,7 +258,20 @@ private static double getInterpolatedPixel1D(double vector[], double t)
 {	
 	double v = 0.0;
 	
-	// Add you code here
+	int i = floor(t);
+    double dx = t - i;
+    
+    // Check if i is within valid bounds
+    if (i >= 0 && i < vector.length - 1) {
+        v = vector[i] * (1 - dx) + vector[i + 1] * dx;
+    } else {
+        // Handle cases where i is out of bounds
+        if (i < 0) {
+            v = vector[0];
+        } else {
+            v = vector[vector.length - 1];
+        }
+    }
 	
 	return v;
 }
