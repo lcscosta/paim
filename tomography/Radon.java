@@ -172,7 +172,6 @@ public static double[] generateCosine(int size)
 		double w = (double)i / (double)size;
 		filter[i] = w * Math.cos(Math.PI*w);
 		filter[size - i] = filter[i];
-
 	}
 	return filter;	
 } 
@@ -234,16 +233,15 @@ public static ImageAccess inverseRadon(ImageAccess sinogram)
           if (mc * mc + nc * nc < radius2) {
             double m = center + mc * cos + nc * sin;
             double v = getInterpolatedPixel1D(array, m);
-            b[k][j] += v;
+            b[k][j] += stepAngle*v;
           } 
         } 
       } 
     } 
 
-    double norm = Math.PI / nbAngles;
-    ImageAccess imageAccess = new ImageAccess(b);
-    imageAccess.multiply(norm);
-    return imageAccess;
+    ImageAccess reconstructed = new ImageAccess(b);
+
+    return reconstructed;
 }
 
 
